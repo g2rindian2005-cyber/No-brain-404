@@ -1,0 +1,136 @@
+<!-- views/admin/categories.ejs -->
+<div class="admin-toolbar">
+  <button class="btn-primary" id="addCatBtn"><i class="fa-solid fa-plus"></i> Add Category</button>
+</div>
+
+<div class="admin-table-card">
+  <div class="table-wrap">
+    <table class="admin-table">
+      <thead><tr><th>ID</th><th>Icon</th><th>Name</th><th>Slug</th><th>Posts</th><th>Status</th><th>Order</th><th>Actions</th></tr></thead>
+      <tbody id="catsTbody"><tr><td colspan="8" class="loading-cell">Loading categories...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Category Modal -->
+<div class="modal-overlay hidden" id="catModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="catModalTitle">Add Category</h3>
+      <button class="modal-close" id="closeCatModal"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="catId" />
+      <div class="form-group">
+        <label>Name *</label>
+        <input type="text" class="form-input" id="catName" placeholder="Category Name" />
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label>Icon (Font Awesome class)</label>
+          <input type="text" class="form-input" id="catIcon" placeholder="fa-code" />
+        </div>
+        <div class="form-group">
+          <label>Color (hex)</label>
+          <input type="color" class="form-input" id="catColor" value="#6366f1" style="height:42px;padding:4px" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea class="form-textarea" id="catDesc" rows="3"></textarea>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label>Sort Order</label>
+          <input type="number" class="form-input" id="catOrder" value="0" />
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select class="form-select" id="catActive">
+            <option value="1">Active</option>
+            <option value="0">Inactive</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" id="cancelCatModal">Cancel</button>
+      <button class="btn-primary" id="saveCatBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadCategories() {
+  const res = await adminRequest('/admin/categories');
+  if (!res || !res.success) return;
+
+  document.getElementById('catsTbody').innerHTML = res.categories.map(c => `
+    <tr>
+      <td>${c.id}</td>
+      <td style="color:${c.color}"><i class="fa-solid ${c.icon}"></i></td>
+      <td>${escHtml(c.name)}</td>
+      <td><code>${c.slug}</code></td>
+      <td>${c.post_count}</td>
+      <td><span class="status-badge ${c.is_active ? 'active' : 'inactive'}">${c.is_active ? 'Active' : 'Inactive'}</span></td>
+      <td>${c.sort_order}</td>
+      <td>
+        <button class="btn-icon-sm" onclick="openEditCat(${c.id},'${escHtml(c.name)}','${c.icon}','${c.color}',\`${escHtml(c.description || '')}\`,${c.sort_order},${c.is_active})">
+          <i class="fa-solid fa-pen"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+function openAddCat() {
+  document.getElementById('catModalTitle').textContent = 'Add Category';
+  document.getElementById('catId').value = '';
+  document.getElementById('catName').value = '';
+  document.getElementById('catIcon').value = 'fa-code';
+  document.getElementById('catColor').value = '#6366f1';
+  document.getElementById('catDesc').value = '';
+  document.getElementById('catOrder').value = '0';
+  document.getElementById('catActive').value = '1';
+  document.getElementById('catModal').classList.remove('hidden');
+}
+
+function openEditCat(id, name, icon, color, desc, order, active) {
+  document.getElementById('catModalTitle').textContent = 'Edit Category';
+  document.getElementById('catId').value = id;
+  document.getElementById('catName').value = name;
+  document.getElementById('catIcon').value = icon;
+  document.getElementById('catColor').value = color;
+  document.getElementById('catDesc').value = desc;
+  document.getElementById('catOrder').value = order;
+  document.getElementById('catActive').value = active;
+  document.getElementById('catModal').classList.remove('hidden');
+}
+
+document.getElementById('addCatBtn').addEventListener('click', openAddCat);
+document.getElementById('closeCatModal').addEventListener('click', () => document.getElementById('catModal').classList.add('hidden'));
+document.getElementById('cancelCatModal').addEventListener('click', () => document.getElementById('catModal').classList.add('hidden'));
+
+document.getElementById('saveCatBtn').addEventListener('click', async () => {
+  const id = document.getElementById('catId').value;
+  const payload = {
+    name: document.getElementById('catName').value.trim(),
+    icon: document.getElementById('catIcon').value.trim(),
+    color: document.getElementById('catColor').value,
+    description: document.getElementById('catDesc').value.trim(),
+    sort_order: parseInt(document.getElementById('catOrder').value),
+    is_active: parseInt(document.getElementById('catActive').value),
+  };
+  if (!payload.name) { showToast('Name is required', 'error'); return; }
+
+  const endpoint = id ? '/admin/categories/' + id : '/admin/categories';
+  const method = id ? 'PUT' : 'POST';
+  const res = await adminRequest(endpoint, method, payload);
+  if (res && res.success) {
+    showToast(id ? 'Category updated' : 'Category created');
+    document.getElementById('catModal').classList.add('hidden');
+    loadCategories();
+  }
+});
+
+loadCategories();
+</script>

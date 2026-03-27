@@ -1,0 +1,185 @@
+<!-- views/home.ejs -->
+
+<!-- Hero Section -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge"><i class="fa-solid fa-bolt"></i> Real Problems. Real Solutions.</div>
+    <h1 class="hero-title">Where Tech Issues<br /><span class="gradient-text">Get Solved Together</span></h1>
+    <p class="hero-sub">Browse thousands of real-world technical problems solved by engineers, developers, and IT professionals. Share your fix, help the next person.</p>
+    <div class="hero-actions">
+      <a href="/submit" class="btn-primary btn-lg"><i class="fa-solid fa-plus"></i> Share Your Solution</a>
+      <a href="#categories" class="btn-ghost btn-lg"><i class="fa-solid fa-compass"></i> Explore Topics</a>
+    </div>
+    <div class="hero-stats" id="heroStats">
+      <div class="stat-pill"><span class="stat-num" id="statPosts">—</span> Solutions</div>
+      <div class="stat-pill"><span class="stat-num" id="statUsers">—</span> Contributors</div>
+      <div class="stat-pill"><span class="stat-num" id="statViews">—</span> Views</div>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="code-card">
+      <div class="code-card-header"><span></span><span></span><span></span></div>
+      <pre class="code-preview"><code><span class="c-green">✓ Problem:</span> Docker container exits code 137
+<span class="c-yellow">→ Cause:</span>  OOM killer (Out of Memory)
+<span class="c-blue">→ Fix:</span>    Set memory limit in compose:
+  mem_limit: <span class="c-orange">512m</span>
+  memswap_limit: <span class="c-orange">512m</span>
+<span class="c-green">✓ Resolved</span> · 4.2k views · DevOps</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- Categories Section -->
+<section class="categories-section" id="categories">
+  <div class="section-header">
+    <h2>Browse by Topic</h2>
+    <p>Find solutions specific to your domain</p>
+  </div>
+  <div class="categories-grid" id="categoriesGrid">
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+  </div>
+</section>
+
+<!-- Trending Section -->
+<section class="trending-section">
+  <div class="section-header">
+    <h2><i class="fa-solid fa-fire"></i> Trending This Week</h2>
+    <a href="/search?sort=popular" class="see-all-link">See All →</a>
+  </div>
+  <div class="trending-list" id="trendingList">
+    <div class="skeleton-row"></div>
+    <div class="skeleton-row"></div>
+    <div class="skeleton-row"></div>
+  </div>
+</section>
+
+<!-- Latest Posts -->
+<section class="posts-section">
+  <div class="section-header">
+    <h2>Latest Solutions</h2>
+    <div class="filter-bar">
+      <select class="filter-select" id="filterSort">
+        <option value="latest">Newest</option>
+        <option value="popular">Most Viewed</option>
+        <option value="likes">Most Liked</option>
+      </select>
+      <select class="filter-select" id="filterDifficulty">
+        <option value="">All Levels</option>
+        <option value="beginner">Beginner</option>
+        <option value="intermediate">Intermediate</option>
+        <option value="advanced">Advanced</option>
+      </select>
+    </div>
+  </div>
+  <div class="posts-grid" id="postsGrid">
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+  </div>
+  <div class="load-more-area">
+    <button class="btn-load-more hidden" id="loadMoreBtn">Load More Solutions</button>
+  </div>
+</section>
+
+<script>
+(function() {
+  let currentPage = 1;
+  let currentSort = 'latest';
+  let currentDifficulty = '';
+
+  async function loadStats() {
+    try {
+      const res = await apiRequest('/posts/stats/overview');
+      if (res.success) {
+        document.getElementById('statPosts').textContent = res.stats.totalPosts.toLocaleString();
+        document.getElementById('statUsers').textContent = res.stats.totalUsers.toLocaleString();
+        document.getElementById('statViews').textContent = (res.stats.totalViews / 1000).toFixed(1) + 'k';
+        renderTrending(res.trending);
+      }
+    } catch(e) {}
+  }
+
+  function renderTrending(posts) {
+    const el = document.getElementById('trendingList');
+    if (!posts || !posts.length) { el.innerHTML = '<p class="empty-msg">No trending posts yet.</p>'; return; }
+    el.innerHTML = posts.map((p, i) => `
+      <a href="/post/${p.slug}" class="trending-item">
+        <span class="trending-rank">${i + 1}</span>
+        <div class="trending-info">
+          <span class="trending-title">${escHtml(p.title)}</span>
+          <span class="trending-meta">
+            <span class="cat-badge" style="background:${p.category_color}20;color:${p.category_color}">${escHtml(p.category_name)}</span>
+            <span><i class="fa-solid fa-eye"></i> ${p.views.toLocaleString()}</span>
+            <span>by ${escHtml(p.username)}</span>
+          </span>
+        </div>
+        <i class="fa-solid fa-arrow-right trending-arrow"></i>
+      </a>
+    `).join('');
+  }
+
+  async function loadPosts(page = 1, append = false) {
+    const grid = document.getElementById('postsGrid');
+    if (!append) {
+      grid.innerHTML = Array(6).fill('<div class="skeleton-card"></div>').join('');
+      currentPage = 1;
+    }
+    const params = new URLSearchParams({ page, limit: 12, sort: currentSort });
+    if (currentDifficulty) params.append('difficulty', currentDifficulty);
+
+    const res = await apiRequest('/posts?' + params.toString());
+    if (!append) grid.innerHTML = '';
+
+    if (!res.success || !res.posts.length) {
+      if (!append) grid.innerHTML = '<p class="empty-msg col-span-3">No solutions found. Be the first to share one!</p>';
+      document.getElementById('loadMoreBtn').classList.add('hidden');
+      return;
+    }
+
+    grid.insertAdjacentHTML('beforeend', res.posts.map(postCard).join(''));
+
+    const btn = document.getElementById('loadMoreBtn');
+    if (res.pagination.page < res.pagination.pages) {
+      btn.classList.remove('hidden');
+      currentPage = res.pagination.page;
+    } else {
+      btn.classList.add('hidden');
+    }
+  }
+
+  async function loadCategories() {
+    const grid = document.getElementById('categoriesGrid');
+    const res = await apiRequest('/categories');
+    if (!res.success) return;
+    grid.innerHTML = res.categories.map(c => `
+      <a href="/category/${c.slug}" class="category-card">
+        <div class="cat-card-icon" style="background:${c.color}20;color:${c.color}">
+          <i class="fa-solid ${c.icon}"></i>
+        </div>
+        <div class="cat-card-info">
+          <h3>${escHtml(c.name)}</h3>
+          <p>${escHtml(c.description.substring(0, 60))}...</p>
+          <span class="cat-count">${c.post_count} solutions</span>
+        </div>
+        <i class="fa-solid fa-chevron-right cat-arrow"></i>
+      </a>
+    `).join('');
+  }
+
+  document.getElementById('filterSort').addEventListener('change', e => { currentSort = e.target.value; loadPosts(); });
+  document.getElementById('filterDifficulty').addEventListener('change', e => { currentDifficulty = e.target.value; loadPosts(); });
+  document.getElementById('loadMoreBtn').addEventListener('click', () => loadPosts(currentPage + 1, true));
+
+  loadStats();
+  loadCategories();
+  loadPosts();
+})();
+</script>

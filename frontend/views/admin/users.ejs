@@ -1,0 +1,143 @@
+<!-- views/admin/users.ejs -->
+<div class="admin-toolbar">
+  <input type="text" class="admin-search-input" id="userSearch" placeholder="Search users by name or email..." />
+  <select class="filter-select" id="userRoleFilter">
+    <option value="">All Roles</option>
+    <option value="user">User</option>
+    <option value="moderator">Moderator</option>
+    <option value="admin">Admin</option>
+  </select>
+</div>
+
+<div class="admin-table-card">
+  <div class="table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>ID</th><th>Username</th><th>Email</th><th>Full Name</th>
+          <th>Role</th><th>Status</th><th>Reputation</th><th>Joined</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="usersTbody"><tr><td colspan="9" class="loading-cell">Loading users...</td></tr></tbody>
+    </table>
+  </div>
+  <div class="table-pagination" id="usersPagination"></div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay hidden" id="editUserModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Edit User</h3>
+      <button class="modal-close" id="closeUserModal"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editUserId" />
+      <div class="form-group">
+        <label>Role</label>
+        <select class="form-select" id="editUserRole">
+          <option value="user">User</option>
+          <option value="moderator">Moderator</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Account Status</label>
+        <select class="form-select" id="editUserActive">
+          <option value="1">Active</option>
+          <option value="0">Inactive</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Ban Status</label>
+        <select class="form-select" id="editUserBanned">
+          <option value="0">Not Banned</option>
+          <option value="1">Banned</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" id="cancelUserModal">Cancel</button>
+      <button class="btn-primary" id="saveUserBtn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let usersPage = 1;
+let usersSearch = '';
+let usersRole = '';
+
+async function loadUsers(p = 1) {
+  usersPage = p;
+  const params = new URLSearchParams({ page: p, limit: 20 });
+  if (usersSearch) params.append('search', usersSearch);
+  if (usersRole) params.append('role', usersRole);
+
+  const res = await adminRequest('/admin/users?' + params.toString());
+  if (!res || !res.success) return;
+
+  document.getElementById('usersTbody').innerHTML = res.users.map(u => `
+    <tr>
+      <td>${u.id}</td>
+      <td><strong>${escHtml(u.username)}</strong></td>
+      <td>${escHtml(u.email)}</td>
+      <td>${escHtml(u.full_name || '—')}</td>
+      <td><span class="role-badge role-${u.role}">${u.role}</span></td>
+      <td>
+        <span class="status-badge ${u.is_banned ? 'banned' : u.is_active ? 'active' : 'inactive'}">
+          ${u.is_banned ? 'Banned' : u.is_active ? 'Active' : 'Inactive'}
+        </span>
+      </td>
+      <td>${u.reputation}</td>
+      <td>${new Date(u.created_at).toLocaleDateString()}</td>
+      <td>
+        <button class="btn-icon-sm" onclick="openEditUser(${u.id},'${u.role}',${u.is_active},${u.is_banned})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn-icon-sm btn-danger-sm" onclick="deleteUserAdmin(${u.id})" title="Delete"><i class="fa-solid fa-trash"></i></button>
+      </td>
+    </tr>`).join('');
+
+  // Pagination
+  renderPagination('usersPagination', res.pagination, loadUsers);
+}
+
+function openEditUser(id, role, isActive, isBanned) {
+  document.getElementById('editUserId').value = id;
+  document.getElementById('editUserRole').value = role;
+  document.getElementById('editUserActive').value = isActive;
+  document.getElementById('editUserBanned').value = isBanned;
+  document.getElementById('editUserModal').classList.remove('hidden');
+}
+
+document.getElementById('closeUserModal').addEventListener('click', () => document.getElementById('editUserModal').classList.add('hidden'));
+document.getElementById('cancelUserModal').addEventListener('click', () => document.getElementById('editUserModal').classList.add('hidden'));
+
+document.getElementById('saveUserBtn').addEventListener('click', async () => {
+  const id = document.getElementById('editUserId').value;
+  const role = document.getElementById('editUserRole').value;
+  const is_active = parseInt(document.getElementById('editUserActive').value);
+  const is_banned = parseInt(document.getElementById('editUserBanned').value);
+
+  const res = await adminRequest('/admin/users/' + id, 'PUT', { role, is_active, is_banned });
+  if (res && res.success) {
+    showToast('User updated successfully');
+    document.getElementById('editUserModal').classList.add('hidden');
+    loadUsers(usersPage);
+  }
+});
+
+async function deleteUserAdmin(id) {
+  if (!confirm('Permanently delete this user and all their posts?')) return;
+  const res = await adminRequest('/admin/users/' + id, 'DELETE');
+  if (res && res.success) { showToast('User deleted'); loadUsers(usersPage); }
+}
+
+let searchTimeout;
+document.getElementById('userSearch').addEventListener('input', e => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => { usersSearch = e.target.value; loadUsers(1); }, 400);
+});
+document.getElementById('userRoleFilter').addEventListener('change', e => { usersRole = e.target.value; loadUsers(1); });
+
+loadUsers();
+</script>

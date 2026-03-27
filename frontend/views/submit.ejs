@@ -1,0 +1,164 @@
+<!-- views/submit.ejs -->
+<div class="submit-page">
+  <div class="submit-container">
+    <div class="submit-header">
+      <h1><i class="fa-solid fa-pen-to-square"></i> Share Your Solution</h1>
+      <p>Help the community by documenting the problem you faced and how you solved it.</p>
+    </div>
+
+    <div id="submitAlert" class="alert hidden"></div>
+
+    <form class="submit-form" id="submitForm" novalidate>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label>Category <span class="required">*</span></label>
+          <select class="form-select" id="categorySelect" required>
+            <option value="">Select a category...</option>
+          </select>
+          <span class="field-error" id="categoryError"></span>
+        </div>
+
+        <div class="form-group">
+          <label>Difficulty Level</label>
+          <select class="form-select" id="difficultySelect">
+            <option value="beginner">Beginner</option>
+            <option value="intermediate" selected>Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Title <span class="required">*</span></label>
+        <input type="text" class="form-input" id="titleInput" placeholder="e.g. Docker container exits with code 137 (OOM Killed)" maxlength="255" />
+        <span class="field-error" id="titleError"></span>
+        <span class="char-count"><span id="titleCount">0</span>/255</span>
+      </div>
+
+      <div class="form-group">
+        <label>Problem Description <span class="required">*</span></label>
+        <p class="field-hint">Describe the error/issue clearly. Include error messages, context, environment details.</p>
+        <textarea class="form-textarea" id="problemInput" rows="6" placeholder="Describe the problem in detail. Include error messages, stack traces, environment, steps that led to the issue..."></textarea>
+        <span class="field-error" id="problemError"></span>
+        <div class="editor-hint">Wrap code in backticks: `code` or triple backticks for blocks: ```code```</div>
+      </div>
+
+      <div class="form-group">
+        <label>Solution <span class="required">*</span></label>
+        <p class="field-hint">Explain exactly how you resolved it. Step-by-step is best!</p>
+        <textarea class="form-textarea" id="solutionInput" rows="8" placeholder="Step 1: ...\nStep 2: ...\n\nInclude commands, config changes, code snippets..."></textarea>
+        <span class="field-error" id="solutionError"></span>
+      </div>
+
+      <div class="form-group">
+        <label>Tags</label>
+        <input type="text" class="form-input" id="tagsInput" placeholder="docker, kubernetes, memory, linux (comma-separated)" />
+        <p class="field-hint">Add up to 5 tags to help people find your solution.</p>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-ghost" onclick="window.history.back()">Cancel</button>
+        <button type="submit" class="btn-primary btn-lg" id="submitBtn">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span id="submitBtnText">Publish Solution</span>
+          <span id="submitSpinner" class="spinner hidden"></span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="submit-tips">
+    <h3><i class="fa-solid fa-lightbulb"></i> Tips for a Great Post</h3>
+    <ul>
+      <li><i class="fa-solid fa-check"></i> Be specific about the error message</li>
+      <li><i class="fa-solid fa-check"></i> Include your OS/environment details</li>
+      <li><i class="fa-solid fa-check"></i> Use code blocks for commands</li>
+      <li><i class="fa-solid fa-check"></i> Explain <em>why</em> the fix works</li>
+      <li><i class="fa-solid fa-check"></i> Add relevant tags</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+(function() {
+  const user = getUser();
+  if (!user) {
+    window.location.href = '/login';
+    return;
+  }
+
+  async function loadCategories() {
+    const res = await apiRequest('/categories');
+    if (res.success) {
+      const sel = document.getElementById('categorySelect');
+      res.categories.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        sel.appendChild(opt);
+      });
+    }
+  }
+
+  document.getElementById('titleInput').addEventListener('input', function() {
+    document.getElementById('titleCount').textContent = this.value.length;
+  });
+
+  document.getElementById('submitForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const alertEl = document.getElementById('submitAlert');
+    const title = document.getElementById('titleInput').value.trim();
+    const problem_description = document.getElementById('problemInput').value.trim();
+    const solution = document.getElementById('solutionInput').value.trim();
+    const category_id = document.getElementById('categorySelect').value;
+    const difficulty = document.getElementById('difficultySelect').value;
+    const tags = document.getElementById('tagsInput').value.trim();
+
+    // Clear errors
+    ['title','problem','solution','category'].forEach(f => {
+      const el = document.getElementById(f + 'Error');
+      if (el) el.textContent = '';
+    });
+
+    let valid = true;
+    if (!title || title.length < 10) { document.getElementById('titleError').textContent = 'Title must be at least 10 characters'; valid = false; }
+    if (!problem_description || problem_description.length < 20) { document.getElementById('problemError').textContent = 'Problem description must be at least 20 characters'; valid = false; }
+    if (!solution || solution.length < 20) { document.getElementById('solutionError').textContent = 'Solution must be at least 20 characters'; valid = false; }
+    if (!category_id) { document.getElementById('categoryError').textContent = 'Please select a category'; valid = false; }
+    if (!valid) return;
+
+    const btn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('submitBtnText');
+    const spinner = document.getElementById('submitSpinner');
+    btn.disabled = true;
+    btnText.textContent = 'Publishing...';
+    spinner.classList.remove('hidden');
+
+    try {
+      const res = await authRequest('/posts', 'POST', { title, problem_description, solution, category_id: parseInt(category_id), difficulty, tags });
+      if (res.success) {
+        alertEl.className = 'alert alert-success';
+        alertEl.textContent = '🎉 Solution published! Redirecting...';
+        alertEl.classList.remove('hidden');
+        setTimeout(() => window.location.href = '/post/' + res.slug, 1200);
+      } else {
+        alertEl.className = 'alert alert-error';
+        alertEl.textContent = res.message || 'Failed to publish';
+        alertEl.classList.remove('hidden');
+        btn.disabled = false;
+        btnText.textContent = 'Publish Solution';
+        spinner.classList.add('hidden');
+      }
+    } catch (err) {
+      alertEl.className = 'alert alert-error';
+      alertEl.textContent = 'Network error. Please try again.';
+      alertEl.classList.remove('hidden');
+      btn.disabled = false;
+      btnText.textContent = 'Publish Solution';
+      spinner.classList.add('hidden');
+    }
+  });
+
+  loadCategories();
+})();
+</script>

@@ -1,0 +1,95 @@
+<!-- views/admin/dashboard.ejs -->
+<div class="admin-stats-grid" id="adminStatsGrid">
+  <div class="stat-card"><div class="stat-icon" style="background:#6366f120;color:#6366f1"><i class="fa-solid fa-file-lines"></i></div><div><div class="stat-value" id="aStat1">—</div><div class="stat-label">Total Posts</div></div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#10b98120;color:#10b981"><i class="fa-solid fa-users"></i></div><div><div class="stat-value" id="aStat2">—</div><div class="stat-label">Total Users</div></div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#f59e0b20;color:#f59e0b"><i class="fa-solid fa-clock"></i></div><div><div class="stat-value" id="aStat3">—</div><div class="stat-label">Pending Posts</div></div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#ef444420;color:#ef4444"><i class="fa-solid fa-ban"></i></div><div><div class="stat-value" id="aStat4">—</div><div class="stat-label">Banned Users</div></div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#3b82f620;color:#3b82f6"><i class="fa-solid fa-comments"></i></div><div><div class="stat-value" id="aStat5">—</div><div class="stat-label">Total Comments</div></div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#8b5cf620;color:#8b5cf6"><i class="fa-solid fa-eye"></i></div><div><div class="stat-value" id="aStat6">—</div><div class="stat-label">Total Views</div></div></div>
+</div>
+
+<div class="admin-tables-row">
+  <div class="admin-table-card">
+    <h3>Recent Posts</h3>
+    <div class="table-wrap">
+      <table class="admin-table" id="recentPostsTable">
+        <thead><tr><th>Title</th><th>Author</th><th>Category</th><th>Status</th><th>Views</th><th>Actions</th></tr></thead>
+        <tbody id="recentPostsTbody"><tr><td colspan="6" class="loading-cell">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="admin-table-card">
+    <h3>Recent Users</h3>
+    <div class="table-wrap">
+      <table class="admin-table" id="recentUsersTable">
+        <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="recentUsersTbody"><tr><td colspan="5" class="loading-cell">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadDashboard() {
+  const res = await adminRequest('/admin/dashboard');
+  if (!res || !res.success) return;
+
+  const s = res.stats;
+  document.getElementById('aStat1').textContent = s.totalPosts.toLocaleString();
+  document.getElementById('aStat2').textContent = s.totalUsers.toLocaleString();
+  document.getElementById('aStat3').textContent = s.pendingPosts.toLocaleString();
+  document.getElementById('aStat4').textContent = s.bannedUsers.toLocaleString();
+  document.getElementById('aStat5').textContent = s.totalComments.toLocaleString();
+  document.getElementById('aStat6').textContent = s.totalViews.toLocaleString();
+
+  document.getElementById('recentPostsTbody').innerHTML = res.recentPosts.map(p => `
+    <tr>
+      <td><a href="/post/${p.slug}" class="table-link">${escHtml(p.title.substring(0,40))}...</a></td>
+      <td>${escHtml(p.username)}</td>
+      <td>${escHtml(p.category_name)}</td>
+      <td><span class="status-badge ${p.is_approved ? 'approved' : 'pending'}">${p.is_approved ? 'Approved' : 'Pending'}</span></td>
+      <td>${p.views}</td>
+      <td>
+        <button class="btn-icon-sm" onclick="toggleApprove(${p.id}, ${p.is_approved ? 0 : 1})" title="${p.is_approved ? 'Unapprove' : 'Approve'}">
+          <i class="fa-solid ${p.is_approved ? 'fa-eye-slash' : 'fa-check'}"></i>
+        </button>
+        <button class="btn-icon-sm btn-danger-sm" onclick="deletePostAdmin(${p.id})" title="Delete">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('recentUsersTbody').innerHTML = res.recentUsers.map(u => `
+    <tr>
+      <td>${escHtml(u.username)}</td>
+      <td>${escHtml(u.email)}</td>
+      <td><span class="role-badge role-${u.role}">${u.role}</span></td>
+      <td><span class="status-badge ${u.is_banned ? 'banned' : 'active'}">${u.is_banned ? 'Banned' : 'Active'}</span></td>
+      <td>
+        <button class="btn-icon-sm ${u.is_banned ? '' : 'btn-warning-sm'}" onclick="toggleBan(${u.id}, ${u.is_banned ? 0 : 1})" title="${u.is_banned ? 'Unban' : 'Ban'}">
+          <i class="fa-solid ${u.is_banned ? 'fa-unlock' : 'fa-ban'}"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+async function toggleApprove(id, val) {
+  const res = await adminRequest('/admin/posts/' + id, 'PUT', { is_approved: val, is_featured: 0, is_published: 1 });
+  if (res && res.success) { showToast('Post updated'); loadDashboard(); }
+}
+
+async function deletePostAdmin(id) {
+  if (!confirm('Delete this post permanently?')) return;
+  const res = await adminRequest('/admin/posts/' + id, 'DELETE');
+  if (res && res.success) { showToast('Post deleted'); loadDashboard(); }
+}
+
+async function toggleBan(id, val) {
+  if (!confirm(val ? 'Ban this user?' : 'Unban this user?')) return;
+  const res = await adminRequest('/admin/users/' + id, 'PUT', { is_banned: val, is_active: val ? 0 : 1, role: 'user' });
+  if (res && res.success) { showToast('User updated'); loadDashboard(); }
+}
+
+loadDashboard();
+</script>

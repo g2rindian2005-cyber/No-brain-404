@@ -1,0 +1,164 @@
+<!-- views/signup.ejs -->
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-card-header">
+      <h2>Join TechSolve</h2>
+      <p>Create your free account and start contributing</p>
+    </div>
+
+    <div id="signupAlert" class="alert hidden"></div>
+
+    <form class="auth-form" id="signupForm" novalidate>
+      <div class="form-group">
+        <label for="full_name">Full Name</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-user"></i>
+          <input type="text" id="full_name" name="full_name" placeholder="John Doe" autocomplete="name" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="username">Username <span class="required">*</span></label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-at"></i>
+          <input type="text" id="username" name="username" placeholder="yourhandle" required autocomplete="username" />
+        </div>
+        <span class="field-error" id="usernameError"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email Address <span class="required">*</span></label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-envelope"></i>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <span class="field-error" id="emailError"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password <span class="required">*</span></label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" id="password" name="password" placeholder="Min 8 chars, upper, lower, number" required />
+          <button type="button" class="toggle-pw" id="togglePw"><i class="fa-solid fa-eye"></i></button>
+        </div>
+        <div class="pw-strength" id="pwStrength">
+          <div class="pw-bar"><div class="pw-fill" id="pwFill"></div></div>
+          <span id="pwLabel"></span>
+        </div>
+        <span class="field-error" id="passwordError"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="confirm_password">Confirm Password <span class="required">*</span></label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" id="confirm_password" placeholder="Repeat password" required />
+        </div>
+        <span class="field-error" id="confirmError"></span>
+      </div>
+
+      <button type="submit" class="btn-primary btn-full" id="signupBtn">
+        <span id="signupBtnText">Create Account</span>
+        <span id="signupSpinner" class="spinner hidden"></span>
+      </button>
+    </form>
+
+    <div class="auth-divider"><span>or</span></div>
+    <p class="auth-switch">Already have an account? <a href="/login">Sign in</a></p>
+  </div>
+</div>
+
+<script>
+// Password strength
+document.getElementById('password').addEventListener('input', function() {
+  const val = this.value;
+  const fill = document.getElementById('pwFill');
+  const label = document.getElementById('pwLabel');
+  let strength = 0;
+  if (val.length >= 8) strength++;
+  if (/[A-Z]/.test(val)) strength++;
+  if (/[a-z]/.test(val)) strength++;
+  if (/[0-9]/.test(val)) strength++;
+  if (/[^A-Za-z0-9]/.test(val)) strength++;
+
+  const levels = ['', 'Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+  const colors = ['', '#ef4444', '#f97316', '#eab308', '#22c55e', '#10b981'];
+  fill.style.width = (strength * 20) + '%';
+  fill.style.background = colors[strength];
+  label.textContent = levels[strength];
+  label.style.color = colors[strength];
+});
+
+document.getElementById('togglePw').addEventListener('click', function() {
+  const pw = document.getElementById('password');
+  const icon = this.querySelector('i');
+  pw.type = pw.type === 'password' ? 'text' : 'password';
+  icon.classList.toggle('fa-eye');
+  icon.classList.toggle('fa-eye-slash');
+});
+
+document.getElementById('signupForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const alertEl = document.getElementById('signupAlert');
+  const username = document.getElementById('username').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const confirm = document.getElementById('confirm_password').value;
+  const full_name = document.getElementById('full_name').value.trim();
+
+  // Clear errors
+  ['username','email','password','confirm'].forEach(f => {
+    const el = document.getElementById(f + 'Error');
+    if (el) el.textContent = '';
+  });
+
+  let valid = true;
+  if (!username || username.length < 3) { document.getElementById('usernameError').textContent = 'Username must be at least 3 characters'; valid = false; }
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) { document.getElementById('usernameError').textContent = 'Only letters, numbers, underscores'; valid = false; }
+  if (!email) { document.getElementById('emailError').textContent = 'Email is required'; valid = false; }
+  if (password.length < 8) { document.getElementById('passwordError').textContent = 'Password must be at least 8 characters'; valid = false; }
+  if (password !== confirm) { document.getElementById('confirmError').textContent = 'Passwords do not match'; valid = false; }
+  if (!valid) return;
+
+  const btn = document.getElementById('signupBtn');
+  const btnText = document.getElementById('signupBtnText');
+  const spinner = document.getElementById('signupSpinner');
+  btnText.textContent = 'Creating account...';
+  spinner.classList.remove('hidden');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(window.API_URL + '/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password, full_name })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      localStorage.setItem('ts_token', data.token);
+      localStorage.setItem('ts_user', JSON.stringify(data.user));
+      alertEl.className = 'alert alert-success';
+      alertEl.textContent = 'Account created! Redirecting...';
+      alertEl.classList.remove('hidden');
+      setTimeout(() => window.location.href = '/', 1000);
+    } else {
+      const msg = data.errors ? data.errors.map(e => e.msg).join(', ') : data.message;
+      alertEl.className = 'alert alert-error';
+      alertEl.textContent = msg;
+      alertEl.classList.remove('hidden');
+      btn.disabled = false;
+      btnText.textContent = 'Create Account';
+      spinner.classList.add('hidden');
+    }
+  } catch (err) {
+    alertEl.className = 'alert alert-error';
+    alertEl.textContent = 'Network error. Please try again.';
+    alertEl.classList.remove('hidden');
+    btn.disabled = false;
+    btnText.textContent = 'Create Account';
+    spinner.classList.add('hidden');
+  }
+});
+</script>

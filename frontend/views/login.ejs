@@ -1,0 +1,109 @@
+<!-- views/login.ejs -->
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-card-header">
+      <h2>Welcome Back</h2>
+      <p>Sign in to your TechSolve account</p>
+    </div>
+
+    <div id="loginAlert" class="alert hidden"></div>
+
+    <form class="auth-form" id="loginForm" novalidate>
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-envelope"></i>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <span class="field-error" id="emailError"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" id="password" name="password" placeholder="Your password" required autocomplete="current-password" />
+          <button type="button" class="toggle-pw" id="togglePw"><i class="fa-solid fa-eye"></i></button>
+        </div>
+        <span class="field-error" id="passwordError"></span>
+      </div>
+
+      <button type="submit" class="btn-primary btn-full" id="loginBtn">
+        <span id="loginBtnText">Sign In</span>
+        <span id="loginSpinner" class="spinner hidden"></span>
+      </button>
+    </form>
+
+    <div class="auth-divider"><span>or</span></div>
+    <p class="auth-switch">Don't have an account? <a href="/signup">Sign up free</a></p>
+
+    <div class="demo-creds">
+      <p><strong>Demo Admin:</strong> admin@techsolve.com / Admin@123456</p>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('togglePw').addEventListener('click', function() {
+  const pw = document.getElementById('password');
+  const icon = this.querySelector('i');
+  pw.type = pw.type === 'password' ? 'text' : 'password';
+  icon.classList.toggle('fa-eye');
+  icon.classList.toggle('fa-eye-slash');
+});
+
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const alert = document.getElementById('loginAlert');
+  const btn = document.getElementById('loginBtn');
+  const btnText = document.getElementById('loginBtnText');
+  const spinner = document.getElementById('loginSpinner');
+
+  // Clear errors
+  document.getElementById('emailError').textContent = '';
+  document.getElementById('passwordError').textContent = '';
+
+  if (!email) { document.getElementById('emailError').textContent = 'Email is required'; return; }
+  if (!password) { document.getElementById('passwordError').textContent = 'Password is required'; return; }
+
+  btnText.textContent = 'Signing in...';
+  spinner.classList.remove('hidden');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(window.API_URL + '/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      localStorage.setItem('ts_token', data.token);
+      localStorage.setItem('ts_user', JSON.stringify(data.user));
+      showAlert(alert, 'success', 'Login successful! Redirecting...');
+      setTimeout(() => {
+        window.location.href = data.user.role === 'admin' ? '/admin' : '/';
+      }, 800);
+    } else {
+      showAlert(alert, 'error', data.message || 'Login failed');
+      btn.disabled = false;
+      btnText.textContent = 'Sign In';
+      spinner.classList.add('hidden');
+    }
+  } catch (err) {
+    showAlert(alert, 'error', 'Network error. Please try again.');
+    btn.disabled = false;
+    btnText.textContent = 'Sign In';
+    spinner.classList.add('hidden');
+  }
+});
+
+function showAlert(el, type, msg) {
+  el.className = 'alert alert-' + type;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+</script>

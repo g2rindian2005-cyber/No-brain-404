@@ -1,0 +1,189 @@
+/* ─── Admin Panel CSS ─────────────────────── */
+.admin-body { background: var(--bg); overflow: hidden; }
+.admin-layout { display: flex; height: 100vh; overflow: hidden; }
+
+/* Sidebar */
+.admin-sidebar {
+  width: 240px; min-width: 240px; background: var(--bg2);
+  border-right: 1px solid var(--border); display: flex;
+  flex-direction: column; overflow-y: auto; transition: all 0.3s;
+  flex-shrink: 0;
+}
+.admin-sidebar.collapsed { width: 64px; min-width: 64px; }
+.sidebar-header {
+  padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.admin-badge {
+  font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em;
+  color: var(--accent); background: var(--accent-glow);
+  padding: 3px 8px; border-radius: 50px; align-self: flex-start;
+  border: 1px solid var(--accent)30;
+}
+.sidebar-nav { padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.sidebar-link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: var(--radius);
+  color: var(--text3); font-size: 0.9rem; font-weight: 600;
+  transition: all var(--transition); white-space: nowrap;
+}
+.sidebar-link:hover { background: var(--bg3); color: var(--text); }
+.sidebar-link.active { background: var(--accent-glow); color: var(--accent); }
+.sidebar-link i { width: 18px; text-align: center; flex-shrink: 0; }
+.sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+
+/* Main Area */
+.admin-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.admin-header {
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 24px; height: 64px; min-height: 64px;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-toggle { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 1.1rem; }
+.admin-page-title { font-size: 1.1rem; font-weight: 700; flex: 1; }
+.admin-header-right { display: flex; align-items: center; gap: 12px; }
+.admin-user-info { font-size: 0.85rem; color: var(--text3); }
+.admin-content { flex: 1; overflow-y: auto; padding: 24px; }
+
+/* Stats Grid */
+.admin-stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px; margin-bottom: 32px;
+}
+.stat-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px;
+  display: flex; align-items: center; gap: 16px;
+}
+.stat-icon {
+  width: 48px; height: 48px; border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0;
+}
+.stat-value { font-size: 1.6rem; font-weight: 800; line-height: 1.2; }
+.stat-label { font-size: 0.78rem; color: var(--text3); margin-top: 2px; }
+
+/* Tables */
+.admin-tables-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.admin-table-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+}
+.admin-table-card h3 {
+  padding: 16px 20px; font-size: 0.95rem; font-weight: 700;
+  border-bottom: 1px solid var(--border);
+}
+.table-wrap { overflow-x: auto; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.admin-table th {
+  padding: 10px 14px; text-align: left; font-size: 0.78rem; font-weight: 700;
+  color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em;
+  background: var(--bg3); border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.admin-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table tr:hover td { background: var(--bg3); }
+.loading-cell { text-align: center; color: var(--text3); padding: 32px; }
+.table-link { color: var(--text); font-weight: 600; }
+.table-link:hover { color: var(--accent); }
+
+/* Badges */
+.status-badge { padding: 3px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; }
+.status-badge.active { background: #22c55e20; color: #22c55e; }
+.status-badge.inactive { background: var(--bg4); color: var(--text3); }
+.status-badge.banned { background: #ef444420; color: #ef4444; }
+.status-badge.approved { background: #22c55e20; color: #22c55e; }
+.status-badge.pending { background: #f59e0b20; color: #f59e0b; }
+.role-badge { padding: 3px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+.role-badge.role-admin { background: #ef444420; color: #ef4444; }
+.role-badge.role-moderator { background: #f59e0b20; color: #f59e0b; }
+.role-badge.role-user { background: var(--bg4); color: var(--text3); }
+
+/* Action Buttons */
+.btn-icon-sm {
+  width: 30px; height: 30px; border-radius: var(--radius);
+  background: var(--bg3); border: 1px solid var(--border);
+  cursor: pointer; color: var(--text3); font-size: 0.8rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+}
+.btn-icon-sm:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger-sm:hover { border-color: var(--red); color: var(--red); background: #ef444415; }
+.btn-warning-sm:hover { border-color: var(--yellow); color: var(--yellow); background: #f59e0b15; }
+
+.toggle-btn {
+  padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 700;
+  cursor: pointer; border: none; transition: all var(--transition);
+}
+.toggle-on { background: #22c55e20; color: #22c55e; }
+.toggle-off { background: var(--bg4); color: var(--text3); }
+
+/* Toolbar */
+.admin-toolbar {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 20px; flex-wrap: wrap;
+}
+.admin-search-input {
+  flex: 1; min-width: 200px; padding: 10px 16px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text); font-family: var(--font-head);
+  font-size: 0.9rem;
+}
+.admin-search-input:focus { outline: none; border-color: var(--accent); }
+
+/* Pagination */
+.table-pagination {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 16px 20px; border-top: 1px solid var(--border);
+}
+.page-btn {
+  width: 32px; height: 32px; border-radius: var(--radius);
+  background: var(--bg3); border: 1px solid var(--border);
+  cursor: pointer; color: var(--text2); font-size: 0.85rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+}
+.page-btn:hover, .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); width: 100%; max-width: 480px;
+  box-shadow: var(--shadow);
+}
+.modal-header {
+  padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-header h3 { font-size: 1.05rem; font-weight: 700; }
+.modal-close { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 1.1rem; }
+.modal-close:hover { color: var(--red); }
+.modal-body { padding: 20px 24px; }
+.modal-footer {
+  padding: 16px 24px 20px; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+
+/* Auth Guard */
+.auth-guard-msg {
+  text-align: center; padding: 80px 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.auth-guard-msg i { font-size: 3rem; color: var(--accent); }
+.auth-guard-msg h2 { font-size: 1.5rem; }
+.auth-guard-msg p { color: var(--text3); }
+
+@media (max-width: 1024px) {
+  .admin-tables-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .admin-sidebar { position: fixed; left: -240px; z-index: 1000; height: 100vh; }
+  .admin-sidebar.open { left: 0; }
+  .admin-stats-grid { grid-template-columns: repeat(2, 1fr); }
+}

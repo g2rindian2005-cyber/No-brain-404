@@ -1,0 +1,117 @@
+<!-- views/search.ejs -->
+<div class="search-page">
+  <div class="search-hero">
+    <h1>Search Solutions</h1>
+    <form action="/search" method="GET" class="hero-search-form">
+      <div class="hero-search-wrap">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" name="q" value="<%= query %>" placeholder="Search problems, solutions, tags..." class="hero-search-input" id="mainSearchInput" autofocus />
+        <button type="submit" class="btn-primary">Search</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="page-body">
+    <div class="search-filters">
+      <div class="filter-bar">
+        <select class="filter-select" id="searchCategory">
+          <option value="">All Categories</option>
+        </select>
+        <select class="filter-select" id="searchDifficulty">
+          <option value="">All Levels</option>
+          <option value="beginner">Beginner</option>
+          <option value="intermediate">Intermediate</option>
+          <option value="advanced">Advanced</option>
+        </select>
+        <select class="filter-select" id="searchSort">
+          <option value="latest">Newest</option>
+          <option value="popular">Most Viewed</option>
+          <option value="likes">Most Liked</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="search-results-header hidden" id="searchResultsHeader">
+      <span id="searchResultCount"></span> results for <strong id="searchQueryDisplay"></strong>
+    </div>
+
+    <div class="posts-grid" id="searchGrid">
+      <p class="empty-msg col-span-3" id="searchPlaceholder">
+        <% if (query) { %>Searching...<% } else { %>Enter a search term above to find solutions.<% } %>
+      </p>
+    </div>
+    <div class="load-more-area">
+      <button class="btn-load-more hidden" id="searchLoadMore">Load More</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  let currentQuery = '<%= query.replace(/'/g, "\\'") %>';
+  let page = 1;
+  let category = '';
+  let difficulty = '';
+  let sort = 'latest';
+
+  async function loadCategories() {
+    const res = await apiRequest('/categories');
+    if (res.success) {
+      const sel = document.getElementById('searchCategory');
+      res.categories.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.slug;
+        opt.textContent = c.name;
+        sel.appendChild(opt);
+      });
+    }
+  }
+
+  async function doSearch(p = 1, append = false) {
+    const grid = document.getElementById('searchGrid');
+    const placeholder = document.getElementById('searchPlaceholder');
+
+    if (!currentQuery && !category) {
+      grid.innerHTML = '<p class="empty-msg col-span-3">Enter a search term or select a category to find solutions.</p>';
+      document.getElementById('searchResultsHeader').classList.add('hidden');
+      return;
+    }
+
+    if (!append) {
+      grid.innerHTML = Array(6).fill('<div class="skeleton-card"></div>').join('');
+    }
+
+    const params = new URLSearchParams({ sort, page: p, limit: 12 });
+    if (currentQuery) params.append('search', currentQuery);
+    if (category) params.append('category', category);
+    if (difficulty) params.append('difficulty', difficulty);
+
+    const res = await apiRequest('/posts?' + params.toString());
+    if (!append) grid.innerHTML = '';
+
+    const header = document.getElementById('searchResultsHeader');
+    header.classList.remove('hidden');
+    document.getElementById('searchResultCount').textContent = res.pagination ? res.pagination.total : 0;
+    document.getElementById('searchQueryDisplay').textContent = currentQuery || category;
+
+    if (!res.success || !res.posts.length) {
+      if (!append) grid.innerHTML = '<p class="empty-msg col-span-3">No results found. Try different keywords or <a href="/submit">share a solution</a>.</p>';
+      document.getElementById('searchLoadMore').classList.add('hidden');
+      return;
+    }
+
+    grid.insertAdjacentHTML('beforeend', res.posts.map(postCard).join(''));
+    const btn = document.getElementById('searchLoadMore');
+    if (res.pagination.page < res.pagination.pages) { btn.classList.remove('hidden'); page = res.pagination.page; }
+    else btn.classList.add('hidden');
+  }
+
+  document.getElementById('searchCategory').addEventListener('change', e => { category = e.target.value; doSearch(); });
+  document.getElementById('searchDifficulty').addEventListener('change', e => { difficulty = e.target.value; doSearch(); });
+  document.getElementById('searchSort').addEventListener('change', e => { sort = e.target.value; doSearch(); });
+  document.getElementById('searchLoadMore').addEventListener('click', () => doSearch(page + 1, true));
+
+  loadCategories();
+  if (currentQuery) doSearch();
+})();
+</script>

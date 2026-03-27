@@ -1,0 +1,84 @@
+<!-- views/admin/posts.ejs -->
+<div class="admin-toolbar">
+  <input type="text" class="admin-search-input" id="postsSearch" placeholder="Search posts by title..." />
+  <select class="filter-select" id="postsApprovedFilter">
+    <option value="">All Posts</option>
+    <option value="1">Approved</option>
+    <option value="0">Pending</option>
+  </select>
+</div>
+
+<div class="admin-table-card">
+  <div class="table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr><th>ID</th><th>Title</th><th>Author</th><th>Category</th><th>Approved</th><th>Featured</th><th>Views</th><th>Likes</th><th>Date</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="postsTbody"><tr><td colspan="10" class="loading-cell">Loading posts...</td></tr></tbody>
+    </table>
+  </div>
+  <div class="table-pagination" id="postsPagination"></div>
+</div>
+
+<script>
+let postsPage = 1;
+let postsSearch = '';
+let postsApproved = '';
+
+async function loadAdminPosts(p = 1) {
+  postsPage = p;
+  const params = new URLSearchParams({ page: p, limit: 20 });
+  if (postsSearch) params.append('search', postsSearch);
+  if (postsApproved !== '') params.append('approved', postsApproved);
+
+  const res = await adminRequest('/admin/posts?' + params.toString());
+  if (!res || !res.success) return;
+
+  document.getElementById('postsTbody').innerHTML = res.posts.map(p => `
+    <tr>
+      <td>${p.id}</td>
+      <td><a href="/post/${p.slug}" class="table-link" target="_blank">${escHtml(p.title.substring(0,45))}...</a></td>
+      <td>${escHtml(p.username)}</td>
+      <td>${escHtml(p.category_name)}</td>
+      <td>
+        <button class="toggle-btn ${p.is_approved ? 'toggle-on' : 'toggle-off'}" onclick="togglePostField(${p.id},'approved',${p.is_approved ? 0 : 1},${p.is_featured},${p.is_published})">
+          ${p.is_approved ? 'Yes' : 'No'}
+        </button>
+      </td>
+      <td>
+        <button class="toggle-btn ${p.is_featured ? 'toggle-on' : 'toggle-off'}" onclick="togglePostField(${p.id},'featured',${p.is_approved},${p.is_featured ? 0 : 1},${p.is_published})">
+          ${p.is_featured ? '⭐ Yes' : 'No'}
+        </button>
+      </td>
+      <td>${p.views}</td>
+      <td>${p.likes}</td>
+      <td>${new Date(p.created_at).toLocaleDateString()}</td>
+      <td>
+        <a href="/post/${p.slug}" class="btn-icon-sm" target="_blank" title="View"><i class="fa-solid fa-eye"></i></a>
+        <button class="btn-icon-sm btn-danger-sm" onclick="deleteAdminPost(${p.id})" title="Delete"><i class="fa-solid fa-trash"></i></button>
+      </td>
+    </tr>`).join('');
+
+  renderPagination('postsPagination', res.pagination, loadAdminPosts);
+}
+
+async function togglePostField(id, field, is_approved, is_featured, is_published) {
+  const res = await adminRequest('/admin/posts/' + id, 'PUT', { is_approved, is_featured, is_published });
+  if (res && res.success) { showToast('Post updated'); loadAdminPosts(postsPage); }
+}
+
+async function deleteAdminPost(id) {
+  if (!confirm('Permanently delete this post?')) return;
+  const res = await adminRequest('/admin/posts/' + id, 'DELETE');
+  if (res && res.success) { showToast('Post deleted'); loadAdminPosts(postsPage); }
+}
+
+let searchTimeout;
+document.getElementById('postsSearch').addEventListener('input', e => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => { postsSearch = e.target.value; loadAdminPosts(1); }, 400);
+});
+document.getElementById('postsApprovedFilter').addEventListener('change', e => { postsApproved = e.target.value; loadAdminPosts(1); });
+
+loadAdminPosts();
+</script>

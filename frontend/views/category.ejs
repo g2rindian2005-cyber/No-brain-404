@@ -1,0 +1,96 @@
+<!-- views/category.ejs -->
+<div class="category-page">
+  <div class="cat-hero" id="catHero">
+    <div class="cat-hero-content">
+      <div class="cat-hero-icon" id="catHeroIcon"><i class="fa-solid fa-spinner fa-spin"></i></div>
+      <div>
+        <h1 id="catHeroTitle">Loading...</h1>
+        <p id="catHeroDesc"></p>
+        <div class="cat-hero-stats">
+          <span id="catPostCount">— solutions</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-body">
+    <div class="filter-row">
+      <div class="filter-bar">
+        <select class="filter-select" id="catSort">
+          <option value="latest">Newest</option>
+          <option value="popular">Most Viewed</option>
+          <option value="likes">Most Liked</option>
+        </select>
+        <select class="filter-select" id="catDifficulty">
+          <option value="">All Levels</option>
+          <option value="beginner">Beginner</option>
+          <option value="intermediate">Intermediate</option>
+          <option value="advanced">Advanced</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="posts-grid" id="catPostsGrid">
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+    </div>
+    <div class="load-more-area">
+      <button class="btn-load-more hidden" id="catLoadMore">Load More</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const slug = '<%= slug %>';
+  let page = 1;
+  let sort = 'latest';
+  let difficulty = '';
+  let catColor = '#6366f1';
+
+  async function loadCategory() {
+    const res = await apiRequest('/categories/' + slug);
+    if (!res.success) { document.getElementById('catHeroTitle').textContent = 'Category Not Found'; return; }
+    const c = res.category;
+    catColor = c.color;
+    document.title = c.name + ' - TechSolve';
+    document.getElementById('catHeroTitle').textContent = c.name;
+    document.getElementById('catHeroDesc').textContent = c.description;
+    document.getElementById('catPostCount').textContent = c.post_count + ' solutions';
+    document.getElementById('catHeroIcon').innerHTML = `<i class="fa-solid ${c.icon}"></i>`;
+    document.getElementById('catHeroIcon').style.background = c.color + '20';
+    document.getElementById('catHeroIcon').style.color = c.color;
+    document.getElementById('catHero').style.borderColor = c.color + '40';
+  }
+
+  async function loadPosts(p = 1, append = false) {
+    const grid = document.getElementById('catPostsGrid');
+    if (!append) { grid.innerHTML = Array(6).fill('<div class="skeleton-card"></div>').join(''); }
+
+    const params = new URLSearchParams({ category: slug, sort, page: p, limit: 12 });
+    if (difficulty) params.append('difficulty', difficulty);
+
+    const res = await apiRequest('/posts?' + params.toString());
+    if (!append) grid.innerHTML = '';
+
+    if (!res.success || !res.posts.length) {
+      if (!append) grid.innerHTML = '<p class="empty-msg col-span-3">No solutions in this category yet. <a href="/submit">Share the first one!</a></p>';
+      document.getElementById('catLoadMore').classList.add('hidden');
+      return;
+    }
+
+    grid.insertAdjacentHTML('beforeend', res.posts.map(postCard).join(''));
+    const btn = document.getElementById('catLoadMore');
+    if (res.pagination.page < res.pagination.pages) { btn.classList.remove('hidden'); page = res.pagination.page; }
+    else btn.classList.add('hidden');
+  }
+
+  document.getElementById('catSort').addEventListener('change', e => { sort = e.target.value; loadPosts(); });
+  document.getElementById('catDifficulty').addEventListener('change', e => { difficulty = e.target.value; loadPosts(); });
+  document.getElementById('catLoadMore').addEventListener('click', () => loadPosts(page + 1, true));
+
+  loadCategory();
+  loadPosts();
+})();
+</script>

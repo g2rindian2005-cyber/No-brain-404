@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body class="admin-body">
+
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="sidebar-header">
+      <a href="/" class="nav-logo">
+        <span class="logo-icon"><i class="fa-solid fa-circle-nodes"></i></span>
+        <span class="logo-text">Tech<span class="accent">Solve</span></span>
+      </a>
+      <span class="admin-badge">ADMIN</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/admin" class="sidebar-link <%= currentPath === '/admin' ? 'active' : '' %>">
+        <i class="fa-solid fa-gauge-high"></i> Dashboard
+      </a>
+      <a href="/admin/users" class="sidebar-link <%= currentPath === '/admin/users' ? 'active' : '' %>">
+        <i class="fa-solid fa-users"></i> Users
+      </a>
+      <a href="/admin/posts" class="sidebar-link <%= currentPath === '/admin/posts' ? 'active' : '' %>">
+        <i class="fa-solid fa-file-lines"></i> Posts
+      </a>
+      <a href="/admin/categories" class="sidebar-link <%= currentPath === '/admin/categories' ? 'active' : '' %>">
+        <i class="fa-solid fa-tags"></i> Categories
+      </a>
+      <hr class="sidebar-divider" />
+      <a href="/" class="sidebar-link"><i class="fa-solid fa-arrow-left"></i> Back to Site</a>
+      <a href="#" class="sidebar-link" id="adminLogout"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <div class="admin-main">
+    <header class="admin-header">
+      <button class="sidebar-toggle" id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
+      <h1 class="admin-page-title"><%= title.split(' - ')[0] %></h1>
+      <div class="admin-header-right">
+        <button class="theme-toggle" id="themeToggle"><i class="fa-solid fa-moon" id="themeIcon"></i></button>
+        <span class="admin-user-info" id="adminUserInfo">Loading...</span>
+      </div>
+    </header>
+    <div class="admin-content">
+      <div id="adminAuthGuard" class="hidden">
+        <div class="auth-guard-msg">
+          <i class="fa-solid fa-lock"></i>
+          <h2>Admin Access Required</h2>
+          <p>You must be logged in as an administrator.</p>
+          <a href="/login" class="btn-primary">Login</a>
+        </div>
+      </div>
+      <div id="adminPageContent"><%- body %></div>
+    </div>
+  </div>
+</div>
+
+<script>window.API_URL = '<%= API_URL %>';</script>
+<script src="/js/app.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

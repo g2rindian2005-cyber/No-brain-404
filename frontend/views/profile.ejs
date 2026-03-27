@@ -1,0 +1,114 @@
+<!-- views/profile.ejs -->
+<div class="profile-page">
+  <div id="profileAlert" class="alert hidden"></div>
+
+  <div class="profile-header">
+    <img src="/images/default-avatar.svg" alt="Avatar" class="profile-avatar" id="profileAvatar" />
+    <div class="profile-info">
+      <h2 id="profileName">Loading...</h2>
+      <p id="profileEmail"></p>
+      <p id="profileBio" style="margin-top:8px;color:var(--text3)"></p>
+      <div class="profile-stats">
+        <div class="profile-stat">
+          <span class="profile-stat-num" id="profilePostCount">—</span>
+          <span class="profile-stat-label">Solutions</span>
+        </div>
+        <div class="profile-stat">
+          <span class="profile-stat-num" id="profileRep">—</span>
+          <span class="profile-stat-label">Reputation</span>
+        </div>
+      </div>
+    </div>
+    <button class="btn-ghost btn-sm" id="editProfileBtn" style="margin-left:auto;align-self:flex-start">
+      <i class="fa-solid fa-pen"></i> Edit Profile
+    </button>
+  </div>
+
+  <!-- Edit Profile Form (hidden by default) -->
+  <div class="submit-container hidden" id="editProfileForm" style="margin-bottom:32px">
+    <h3 style="margin-bottom:20px">Edit Profile</h3>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" class="form-input" id="editFullName" />
+    </div>
+    <div class="form-group">
+      <label>Bio</label>
+      <textarea class="form-textarea" id="editBio" rows="3" placeholder="Tell the community about yourself..."></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn-ghost" id="cancelEditProfile">Cancel</button>
+      <button class="btn-primary" id="saveProfileBtn">Save Changes</button>
+    </div>
+  </div>
+
+  <div class="section-header" style="padding-inline:0">
+    <h2>My Solutions</h2>
+  </div>
+  <div class="posts-grid" id="profilePostsGrid">
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+  </div>
+  <p class="empty-msg hidden" id="noPostsMsg">You haven't shared any solutions yet. <a href="/submit">Share your first one!</a></p>
+</div>
+
+<script>
+(function() {
+  const user = getUser();
+  if (!user) { window.location.href = '/login'; return; }
+
+  async function loadProfile() {
+    const res = await authRequest('/auth/me');
+    if (!res || !res.success) return;
+    const u = res.user;
+
+    document.getElementById('profileName').textContent = u.full_name || u.username;
+    document.getElementById('profileEmail').textContent = u.email;
+    document.getElementById('profileBio').textContent = u.bio || '';
+    document.getElementById('profileRep').textContent = u.reputation;
+    document.getElementById('editFullName').value = u.full_name || '';
+    document.getElementById('editBio').value = u.bio || '';
+  }
+
+  async function loadMyPosts() {
+    const res = await apiRequest('/posts?page=1&limit=20');
+    const grid = document.getElementById('profilePostsGrid');
+    grid.innerHTML = '';
+
+    if (!res.success) return;
+    const myPosts = res.posts.filter(p => p.username === user.username);
+
+    document.getElementById('profilePostCount').textContent = myPosts.length;
+
+    if (!myPosts.length) {
+      document.getElementById('noPostsMsg').classList.remove('hidden');
+      return;
+    }
+    grid.innerHTML = myPosts.map(postCard).join('');
+  }
+
+  document.getElementById('editProfileBtn').addEventListener('click', () => {
+    document.getElementById('editProfileForm').classList.toggle('hidden');
+  });
+  document.getElementById('cancelEditProfile').addEventListener('click', () => {
+    document.getElementById('editProfileForm').classList.add('hidden');
+  });
+
+  document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+    const full_name = document.getElementById('editFullName').value.trim();
+    const bio = document.getElementById('editBio').value.trim();
+    const res = await authRequest('/auth/profile', 'PUT', { full_name, bio });
+    if (res && res.success) {
+      const u = JSON.parse(localStorage.getItem('ts_user'));
+      u.full_name = full_name;
+      localStorage.setItem('ts_user', JSON.stringify(u));
+      showToast('Profile updated!');
+      document.getElementById('editProfileForm').classList.add('hidden');
+      loadProfile();
+    }
+  });
+
+  loadProfile();
+  loadMyPosts();
+})();
+</script>

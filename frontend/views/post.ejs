@@ -1,0 +1,206 @@
+<!-- views/post.ejs -->
+<div class="post-page" id="postPage">
+  <div class="post-loading" id="postLoading">
+    <div class="skeleton-post-header"></div>
+    <div class="skeleton-post-body"></div>
+  </div>
+
+  <div class="post-layout hidden" id="postContent">
+    <!-- Main -->
+    <article class="post-main">
+      <div class="post-header">
+        <div class="post-meta-top">
+          <a href="#" class="cat-badge post-cat-badge" id="postCatBadge"></a>
+          <span class="difficulty-badge" id="postDifficulty"></span>
+          <span class="post-date" id="postDate"></span>
+        </div>
+        <h1 class="post-title" id="postTitle"></h1>
+        <div class="post-author-row">
+          <img src="/images/default-avatar.svg" alt="" class="author-avatar" id="postAuthorAvatar" />
+          <div>
+            <span class="author-name" id="postAuthorName"></span>
+            <span class="author-rep" id="postAuthorRep"></span>
+          </div>
+          <div class="post-actions-top" id="postActionsTop"></div>
+        </div>
+      </div>
+
+      <section class="post-section problem-section">
+        <h2><i class="fa-solid fa-triangle-exclamation"></i> The Problem</h2>
+        <div class="post-body-content" id="postProblem"></div>
+      </section>
+
+      <section class="post-section solution-section">
+        <h2><i class="fa-solid fa-circle-check"></i> The Solution</h2>
+        <div class="post-body-content" id="postSolution"></div>
+      </section>
+
+      <div class="post-tags" id="postTags"></div>
+
+      <div class="post-engagement">
+        <button class="engage-btn" id="likeBtn">
+          <i class="fa-solid fa-heart"></i>
+          <span id="likeCount">0</span>
+        </button>
+        <span class="engage-btn">
+          <i class="fa-solid fa-eye"></i>
+          <span id="viewCount">0</span>
+        </span>
+        <button class="engage-btn" id="shareBtn">
+          <i class="fa-solid fa-share-nodes"></i> Share
+        </button>
+      </div>
+
+      <!-- Comments -->
+      <section class="comments-section">
+        <h3><i class="fa-solid fa-comments"></i> Discussion <span id="commentCount"></span></h3>
+        <div id="commentFormArea"></div>
+        <div class="comments-list" id="commentsList"></div>
+      </section>
+    </article>
+
+    <!-- Sidebar -->
+    <aside class="post-sidebar">
+      <div class="sidebar-widget">
+        <h4>Related Solutions</h4>
+        <div id="relatedPosts"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function() {
+  const slug = '<%= slug %>';
+  let postId = null;
+
+  async function loadPost() {
+    const res = await apiRequest('/posts/' + slug);
+    if (!res.success) {
+      document.getElementById('postLoading').innerHTML = '<div class="error-msg"><i class="fa-solid fa-triangle-exclamation"></i> Post not found. <a href="/">Go home</a></div>';
+      return;
+    }
+
+    document.getElementById('postLoading').classList.add('hidden');
+    document.getElementById('postContent').classList.remove('hidden');
+
+    const p = res.post;
+    postId = p.id;
+    document.title = p.title + ' - TechSolve';
+
+    document.getElementById('postTitle').textContent = p.title;
+    document.getElementById('postCatBadge').textContent = p.category_name;
+    document.getElementById('postCatBadge').href = '/category/' + p.category_slug;
+    document.getElementById('postCatBadge').style.background = p.category_color + '20';
+    document.getElementById('postCatBadge').style.color = p.category_color;
+
+    const diffColors = { beginner: '#22c55e', intermediate: '#f59e0b', advanced: '#ef4444' };
+    const diffEl = document.getElementById('postDifficulty');
+    diffEl.textContent = p.difficulty;
+    diffEl.style.background = (diffColors[p.difficulty] || '#6366f1') + '20';
+    diffEl.style.color = diffColors[p.difficulty] || '#6366f1';
+
+    document.getElementById('postDate').textContent = new Date(p.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('postAuthorName').textContent = p.username;
+    document.getElementById('postAuthorRep').textContent = '⭐ ' + p.reputation + ' rep';
+    document.getElementById('postProblem').innerHTML = formatContent(p.problem_description);
+    document.getElementById('postSolution').innerHTML = formatContent(p.solution);
+    document.getElementById('likeCount').textContent = p.likes;
+    document.getElementById('viewCount').textContent = p.views;
+
+    if (p.tags) {
+      document.getElementById('postTags').innerHTML = p.tags.split(',').map(t =>
+        `<span class="tag">#${escHtml(t.trim())}</span>`
+      ).join('');
+    }
+
+    renderComments(res.comments);
+    renderRelated(res.related);
+
+    const user = getUser();
+    if (user) {
+      document.getElementById('commentFormArea').innerHTML = `
+        <form class="comment-form" id="commentForm">
+          <textarea id="commentInput" placeholder="Share your thoughts or additional tips..." rows="3"></textarea>
+          <button type="submit" class="btn-primary">Post Comment</button>
+        </form>`;
+
+      document.getElementById('commentForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const content = document.getElementById('commentInput').value.trim();
+        if (!content) return;
+        const r = await authRequest('/posts/' + postId + '/comments', 'POST', { content });
+        if (r.success) {
+          document.getElementById('commentInput').value = '';
+          renderComments([...getAllComments(), r.comment]);
+        }
+      });
+
+      if (user.id === p.user_id || user.role === 'admin') {
+        document.getElementById('postActionsTop').innerHTML = `
+          <a href="/submit?edit=${postId}" class="btn-ghost btn-sm"><i class="fa-solid fa-pen"></i> Edit</a>`;
+      }
+    } else {
+      document.getElementById('commentFormArea').innerHTML = `<p class="login-prompt"><a href="/login">Login</a> to join the discussion.</p>`;
+    }
+
+    document.getElementById('likeBtn').addEventListener('click', async () => {
+      if (!getUser()) { window.location.href = '/login'; return; }
+      const r = await authRequest('/posts/' + postId + '/like', 'POST');
+      if (r.success) {
+        const count = parseInt(document.getElementById('likeCount').textContent);
+        document.getElementById('likeCount').textContent = r.liked ? count + 1 : count - 1;
+        document.getElementById('likeBtn').classList.toggle('liked', r.liked);
+      }
+    });
+
+    document.getElementById('shareBtn').addEventListener('click', () => {
+      if (navigator.share) {
+        navigator.share({ title: p.title, url: window.location.href });
+      } else {
+        navigator.clipboard.writeText(window.location.href);
+        showToast('Link copied!');
+      }
+    });
+  }
+
+  let _comments = [];
+  function getAllComments() { return _comments; }
+
+  function renderComments(comments) {
+    _comments = comments;
+    const el = document.getElementById('commentsList');
+    document.getElementById('commentCount').textContent = '(' + comments.length + ')';
+    if (!comments.length) { el.innerHTML = '<p class="empty-msg">No comments yet. Start the discussion!</p>'; return; }
+    el.innerHTML = comments.map(c => `
+      <div class="comment-item">
+        <img src="/images/default-avatar.svg" alt="" class="comment-avatar" />
+        <div class="comment-body">
+          <div class="comment-header">
+            <strong>${escHtml(c.username)}</strong>
+            <span class="comment-date">${new Date(c.created_at).toLocaleDateString()}</span>
+          </div>
+          <p>${escHtml(c.content)}</p>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderRelated(posts) {
+    const el = document.getElementById('relatedPosts');
+    if (!posts.length) { el.innerHTML = '<p class="empty-msg">No related posts.</p>'; return; }
+    el.innerHTML = posts.map(p => `
+      <a href="/post/${p.slug}" class="related-item">
+        <span class="related-title">${escHtml(p.title)}</span>
+        <span class="related-meta"><i class="fa-solid fa-eye"></i> ${p.views} · ${escHtml(p.username)}</span>
+      </a>`).join('');
+  }
+
+  function formatContent(text) {
+    return text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+               .replace(/`([^`]+)`/g, '<code>$1</code>')
+               .replace(/\n/g, '<br/>');
+  }
+
+  loadPost();
+})();
+</script>
