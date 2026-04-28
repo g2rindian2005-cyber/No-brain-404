@@ -1,0 +1,12 @@
+name: gokul
+on:
+push:
+branches:
+- main
+
+jobs:
+ gokul:
+ runs-on: ubuntu-latest
+  steps:
+  -name : your name
+  echo: gokul
